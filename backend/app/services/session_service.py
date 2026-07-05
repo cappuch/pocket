@@ -6,8 +6,9 @@ import json
 from datetime import datetime, timezone
 from typing import Optional
 
+import uuid
+
 import redis.asyncio as redis
-from uuid7 import uuid7
 
 from app.config import settings
 from app.models import Session
@@ -28,7 +29,7 @@ def _session_key(session_id: str) -> str:
 
 async def create_session(user_id: str, metadata: dict | None = None) -> Session:
     r = await get_redis()
-    session_id = str(uuid7())
+    session_id = str(uuid.uuid4())
     session = Session(
         session_id=session_id,
         user_id=user_id,

@@ -28,7 +28,7 @@ GOOGLE_OAUTH = OAuthConfig(
         "https://www.googleapis.com/auth/drive.readonly",
         "https://www.googleapis.com/auth/contacts.readonly",
     ],
-    extra_params={"include_granted_scopes": "true"},
+    extra_params={},
 )
 
 # --- Tool definitions ---

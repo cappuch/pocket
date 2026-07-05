@@ -1,6 +1,6 @@
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
-redis[hiredis]==5.0.8
+redis==5.0.8
 openai==1.51.0
 exa-py==2.14.0
 pydantic==2.9.2
@@ -8,4 +8,4 @@ pydantic-settings==2.5.2
 sse-starlette==2.1.3
 python-dotenv==1.0.1
 uuid7==0.1.0
-httpx==0.27.2
+httpx>=0.28.1

@@ -2,13 +2,16 @@
 MCP API routes — provider listing, OAuth flow, connection management.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from app.mcp import oauth, token_store
 from app.mcp.registry import get_provider, list_providers
 
 router = APIRouter(prefix="/mcp", tags=["mcp"])
+
+REDIRECT_URI = "http://localhost:8000/mcp/oauth/google/callback"
 
 
 # --- Models ---
@@ -125,3 +128,49 @@ async def get_connections(user_id: str = Query(...)):
             "token_valid": valid,
         })
     return result
+
+
+# --- Direct OAuth redirect handlers (for local dev without a frontend) ---
+
+@router.get("/oauth/{provider_id}/start")
+async def oauth_start(provider_id: str, user_id: str = Query(default="test-user")):
+    """
+    Visit this URL in your browser to start the OAuth flow.
+    e.g. http://localhost:8000/mcp/oauth/google/start?user_id=test-user
+    """
+    redirect_uri = f"http://localhost:8000/mcp/oauth/{provider_id}/callback"
+    url = oauth.get_authorize_url(provider_id, user_id, redirect_uri)
+    if url is None:
+        raise HTTPException(status_code=404, detail="Provider not found")
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=url)
+
+
+@router.get("/oauth/{provider_id}/callback")
+async def oauth_redirect_callback(provider_id: str, code: str = Query(...), state: str = Query(...)):
+    """
+    Google redirects here after the user approves.
+    State format is: {user_id}:{provider_id}
+    """
+    parts = state.split(":", 1)
+    if len(parts) != 2:
+        raise HTTPException(status_code=400, detail="Invalid state parameter")
+
+    user_id = parts[0]
+    redirect_uri = f"http://localhost:8000/mcp/oauth/{provider_id}/callback"
+
+    success = await oauth.exchange_code(
+        provider_id=provider_id,
+        user_id=user_id,
+        code=code,
+        redirect_uri=redirect_uri,
+    )
+
+    if not success:
+        return HTMLResponse("<h1>Connection failed</h1><p>Token exchange failed. Check your client secret.</p>", status_code=400)
+
+    return HTMLResponse(f"""
+        <h1>Connected!</h1>
+        <p>{provider_id} is now connected for user <b>{user_id}</b>.</p>
+        <p>You can close this tab.</p>
+    """)
